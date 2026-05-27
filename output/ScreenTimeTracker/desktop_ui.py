@@ -172,7 +172,77 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.refresh_data)
         self.timer.start(5000)
 
+        # 系统托盘
+        self._allow_exit = False
+        self.build_tray()
+
         self.refresh_data()
+
+    # ─── 系统托盘 ──────────────────────────────
+
+    def build_tray(self):
+        """常驻系统托盘：关闭窗口最小化到托盘，右键菜单可显示/退出"""
+        icon_path = str(PROJECT_DIR / "icon.ico")
+        tray_icon = QIcon(icon_path) if os.path.exists(icon_path) else self.windowIcon()
+
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray = None
+            return
+
+        self.tray = QSystemTrayIcon(tray_icon, self)
+        self.tray.setToolTip("屏幕使用时间")
+
+        menu = QMenu()
+        show_act = QAction("显示窗口", self)
+        show_act.triggered.connect(self.show_from_tray)
+        menu.addAction(show_act)
+
+        hide_act = QAction("隐藏窗口", self)
+        hide_act.triggered.connect(self.hide)
+        menu.addAction(hide_act)
+
+        menu.addSeparator()
+
+        quit_act = QAction("退出", self)
+        quit_act.triggered.connect(self.quit_app)
+        menu.addAction(quit_act)
+
+        self.tray.setContextMenu(menu)
+        self.tray.activated.connect(self._on_tray_activated)
+        self.tray.show()
+
+    def _on_tray_activated(self, reason):
+        # 单击/双击托盘图标都切换显示
+        if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick):
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show_from_tray()
+
+    def show_from_tray(self):
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def quit_app(self):
+        self._allow_exit = True
+        if self.tray:
+            self.tray.hide()
+        QApplication.instance().quit()
+
+    def closeEvent(self, event):
+        """关闭按钮 → 最小化到托盘；只有从托盘菜单退出才真正关闭"""
+        if self._allow_exit or not self.tray:
+            event.accept()
+            return
+        event.ignore()
+        self.hide()
+        self.tray.showMessage(
+            "屏幕使用时间",
+            "已最小化到托盘，继续在后台运行。右键托盘图标可退出。",
+            QSystemTrayIcon.Information,
+            3000,
+        )
 
     # ─── 标题 ──────────────────────────────
 
@@ -649,6 +719,11 @@ class TimelineWidget(QWidget):
 def launch():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    # 关闭窗口后不退出进程，托盘仍驻留
+    app.setQuitOnLastWindowClosed(False)
+    icon_path = str(PROJECT_DIR / "icon.ico")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
