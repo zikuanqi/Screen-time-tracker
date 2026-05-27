@@ -4,8 +4,8 @@ import sys
 import os
 from pathlib import Path
 
-# 项目根目录
-project_dir = Path(__file__).parent
+# 项目根目录（PyInstaller 6.x 的 spec 执行上下文不再定义 __file__，改用 SPEC）
+project_dir = Path(SPEC).resolve().parent
 
 # 添加项目路径到 sys.path
 sys.path.insert(0, str(project_dir))
@@ -33,7 +33,6 @@ a = Analysis(
         'win32process',
         'win32api',
         'win32con',
-        'pysqlite3',
     ],
     hookspath=[],
     hooksconfig={},
@@ -44,14 +43,11 @@ a = Analysis(
         'django', 'flask', 'tornado',  # Web 框架
         'pytest', 'unittest',  # 测试框架
     ],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=None,
     noarchive=False,
 )
 
 # 打包选项
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+pyz = PYZ(a.pure, a.zipped_data)
 
 # 单文件 exe
 exe = EXE(
