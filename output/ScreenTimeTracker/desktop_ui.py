@@ -716,7 +716,25 @@ class TimelineWidget(QWidget):
 
 # ─── 启动 ────────────────────────────────────
 
+def _install_crash_logger():
+    """把未处理异常写到 desktop_ui_error.log，便于 pythonw 模式下事后排查"""
+    import traceback as _tb
+    log_path = PROJECT_DIR / "desktop_ui_error.log"
+
+    def _hook(exc_type, exc_val, exc_tb):
+        try:
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"\n[{datetime.now().isoformat()}] Unhandled exception:\n")
+                _tb.print_exception(exc_type, exc_val, exc_tb, file=f)
+        except Exception:
+            pass
+        sys.__excepthook__(exc_type, exc_val, exc_tb)
+
+    sys.excepthook = _hook
+
+
 def launch():
+    _install_crash_logger()
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     # 关闭窗口后不退出进程，托盘仍驻留
