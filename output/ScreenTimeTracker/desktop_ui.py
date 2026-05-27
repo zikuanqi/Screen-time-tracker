@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QLabel, QPushButton, QScrollArea, QFrame, QGridLayout,
     QSystemTrayIcon, QMenu, QSizePolicy, QSpacerItem
 )
-from PySide6.QtCore import Qt, QTimer, QRectF, QSize
+from PySide6.QtCore import Qt, QTimer, QRectF, QPointF, QSize
 from PySide6.QtGui import (
     QPainter, QColor, QBrush, QPen, QFont, QFontDatabase,
     QPainterPath, QLinearGradient, QIcon, QAction, QPixmap,
