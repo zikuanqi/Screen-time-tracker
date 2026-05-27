@@ -30,25 +30,40 @@ def is_tracker_running():
         return False
 
 
-def start_tracker():
-    """后台启动追踪器"""
-    pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
-    if not os.path.exists(pythonw):
-        pythonw = sys.executable  # 回退
+def _pythonw():
+    """返回 pythonw.exe 路径（无控制台），找不到则回退 sys.executable"""
+    pw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+    return pw if os.path.exists(pw) else sys.executable
 
+
+def _detached_flags():
+    """Windows 下让子进程完全脱离父进程的控制台和 job，父退出后仍存活"""
+    if os.name != 'nt':
+        return 0
+    DETACHED_PROCESS = 0x00000008
+    CREATE_NEW_PROCESS_GROUP = 0x00000200
+    CREATE_BREAKAWAY_FROM_JOB = 0x01000000
+    return DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB
+
+
+def start_tracker():
+    """后台启动追踪器（无窗口，脱离父进程）"""
     subprocess.Popen(
-        [pythonw, str(TRACKER_SCRIPT)],
+        [_pythonw(), str(TRACKER_SCRIPT)],
         cwd=str(PROJECT_DIR),
-        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        creationflags=_detached_flags(),
+        close_fds=True,
     )
     print("追踪器已启动（后台）")
 
 
 def start_ui():
-    """启动桌面客户端"""
+    """启动桌面客户端（pythonw 无控制台 + 脱离父进程，避免父终端关闭时被杀）"""
     subprocess.Popen(
-        [sys.executable, str(UI_SCRIPT)],
-        cwd=str(PROJECT_DIR)
+        [_pythonw(), str(UI_SCRIPT)],
+        cwd=str(PROJECT_DIR),
+        creationflags=_detached_flags(),
+        close_fds=True,
     )
     print("桌面客户端已启动")
 
